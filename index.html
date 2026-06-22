@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Админ Tapkogram</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg-main: #1a0f1a;
+            --bg-surface: #2d1b2d;
+            --bg-surface-variant: #3d263d;
+            --color-primary: #ffb0ff;
+            --color-on-primary: #571257;
+            --color-primary-container: #722c72;
+            --color-on-primary-container: #ffd6ff;
+            --text-main: #f1e0f1;
+            --text-variant: #caaeca;
+            --outline: #523a52;
+            --color-error: #ffb4ab;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            height: -webkit-fill-available;
+            background-color: var(--bg-main);
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #app {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-main);
+            position: relative;
+        }
+
+        header {
+            height: 64px;
+            background-color: var(--bg-surface);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid var(--bg-surface-variant);
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .header-title-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        #dbStatus {
+            font-size: 12px;
+            color: var(--color-primary);
+        }
+
+        .admin-badge {
+            font-size: 14px;
+            color: var(--color-on-primary);
+            background: var(--color-primary);
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-weight: 500;
+        }
+
+        .tabs {
+            display: flex;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--outline);
+            flex-shrink: 0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-variant);
+            padding: 12px 0;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: var(--color-primary);
+            border-bottom-color: var(--color-primary);
+        }
+
+        .content-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--bg-surface-variant);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--color-primary);
+        }
+
+        .card-subtitle {
+            font-size: 11px;
+            color: var(--text-variant);
+        }
+
+        .card-body {
+            font-size: 15px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .btn-action {
+            background: var(--bg-surface-variant);
+            border: 1px solid var(--outline);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-action:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-action.danger {
+            color: var(--color-error);
+            border-color: rgba(255, 180, 171, 0.2);
+        }
+
+        .reply-box {
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 3px solid var(--color-primary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .search-bar {
+            padding: 12px 16px;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--bg-surface-variant);
+            flex-shrink: 0;
+        }
+
+        .search-bar input {
+            width: 100%;
+            height: 40px;
+            padding: 0 16px;
+            border: 2px solid var(--outline);
+            border-radius: 20px;
+            font-size: 14px;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            outline: none;
+        }
+
+        .search-bar input:focus {
+            border-color: var(--color-primary);
+        }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            z-index: 20;
+        }
+
+        .modal-content {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--outline);
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .modal-content h3 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .modal-content input {
+            width: 100%;
+            height: 48px;
+            padding: 0 16px;
+            border: 2px solid var(--outline);
+            border-radius: 24px;
+            font-size: 15px;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            outline: none;
+        }
+
+        .modal-content input:focus {
+            border-color: var(--color-primary);
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .modal-btn {
+            height: 40px;
+            padding: 0 16px;
+            border-radius: 20px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .modal-btn.confirm {
+            background-color: var(--color-primary);
+            color: var(--color-on-primary);
+        }
+
+        .modal-btn.cancel {
+            background-color: var(--bg-surface-variant);
+            color: var(--text-main);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+
+        .stat-item {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--bg-surface-variant);
+            padding: 16px;
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 24px;
+            font-weight: 500;
+            color: var(--color-primary);
+        }
+
+        .stat-lbl {
+            font-size: 12px;
+            color: var(--text-variant);
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <header>
+        <div class="header-title-container">
+            <h1>Админ Tapkogram</h1>
+            <span id="dbStatus">подключение к RTDB...</span>
+        </div>
+        <div class="admin-badge">Панель</div>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" id="tabUsersBtn">
+            <span class="material-symbols-outlined">group</span> Юзеры
+        </button>
+        <button class="tab-btn" id="tabMsgsBtn">
+            <span class="material-symbols-outlined">forum</span> Сообщения
+        </button>
+    </div>
+
+    <div class="search-bar">
+        <input type="text" id="panelSearch" placeholder="Поиск...">
+    </div>
+
+    <div id="panelUsers" class="content-panel">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-val" id="totalUsersCount">0</div>
+                <div class="stat-lbl">Всего юзеров</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-val" id="activeTypersCount">0</div>
+                <div class="stat-lbl">Печатают сейчас</div>
+            </div>
+        </div>
+        <div id="usersList" style="display:flex; flex-direction:column; gap:12px;"></div>
+    </div>
+
+    <div id="panelMsgs" class="content-panel hidden">
+        <div id="msgsList" style="display:flex; flex-direction:column; gap:12px;"></div>
+    </div>
+
+    <div id="editUserModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>Изменить профиль юзера</h3>
+            <input type="text" id="editUserNickInput" placeholder="Новый никнейм">
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" id="closeUserModalBtn">Отмена</button>
+                <button class="modal-btn confirm" id="saveUserModalBtn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editMsgModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>Редактировать текст сообщения</h3>
+            <input type="text" id="editMsgTextInput" placeholder="Новый текст сообщения">
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" id="closeMsgModalBtn">Отмена</button>
+                <button class="modal-btn confirm" id="saveMsgModalBtn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCgrN0wvT9hMaKjm33jjCVMbxNcLPEvYOU",
+        authDomain: "prmesenger.firebaseapp.com",
+        databaseURL: "https://prmesenger-default-rtdb.firebaseio.com",
+        projectId: "prmesenger",
+        storageBucket: "prmesenger.firebasestorage.app",
+        messagingSenderId: "278915268758",
+        appId: "1:278915268758:web:8895895a983bb06a9b02b7",
+        measurementId: "G-H58JHCGP91"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const messagesRef = db.ref('messages');
+    const usersRef = db.ref('users');
+    const typingRef = db.ref('typing');
+
+    const tabUsersBtn = document.getElementById('tabUsersBtn');
+    const tabMsgsBtn = document.getElementById('tabMsgsBtn');
+    const panelUsers = document.getElementById('panelUsers');
+    const panelMsgs = document.getElementById('panelMsgs');
+    
+    const usersList = document.getElementById('usersList');
+    const msgsList = document.getElementById('msgsList');
+    const panelSearch = document.getElementById('panelSearch');
+    const dbStatus = document.getElementById('dbStatus');
+    
+    const totalUsersCount = document.getElementById('totalUsersCount');
+    const activeTypersCount = document.getElementById('activeTypersCount');
+
+    const editUserModal = document.getElementById('editUserModal');
+    const editUserNickInput = document.getElementById('editUserNickInput');
+    const closeUserModalBtn = document.getElementById('closeUserModalBtn');
+    const saveUserModalBtn = document.getElementById('saveUserModalBtn');
+
+    const editMsgModal = document.getElementById('editMsgModal');
+    const editMsgTextInput = document.getElementById('editMsgTextInput');
+    const closeMsgModalBtn = document.getElementById('closeMsgModalBtn');
+    const saveMsgModalBtn = document.getElementById('saveMsgModalBtn');
+
+    let selectedUserId = null;
+    let selectedMsgId = null;
+    let searchQuery = '';
+
+    db.ref('.info/connected').on('value', (snap) => {
+        if (snap.val() === true) {
+            dbStatus.textContent = 'база данных подключена';
+            dbStatus.style.color = 'var(--color-primary)';
+        } else {
+            dbStatus.textContent = 'отключено';
+            dbStatus.style.color = 'var(--color-error)';
+        }
+    });
+
+    tabUsersBtn.addEventListener('click', () => {
+        tabUsersBtn.classList.add('active');
+        tabMsgsBtn.classList.remove('active');
+        panelUsers.classList.remove('hidden');
+        panelMsgs.classList.add('hidden');
+    });
+
+    tabMsgsBtn.addEventListener('click', () => {
+        tabMsgsBtn.classList.add('active');
+        tabUsersBtn.classList.remove('active');
+        panelMsgs.classList.remove('hidden');
+        panelUsers.classList.add('hidden');
+    });
+
+    panelSearch.addEventListener('input', (e) => {
+        searchQuery = e.target.value.toLowerCase().trim();
+        renderUsers();
+        renderMessages();
+    });
+
+    let localUsers = {};
+    let localMessages = {};
+    let localTyping = {};
+
+    usersRef.on('value', (snapshot) => {
+        localUsers = snapshot.val() || {};
+        totalUsersCount.textContent = Object.keys(localUsers).length;
+        renderUsers();
+    });
+
+    typingRef.on('value', (snapshot) => {
+        localTyping = snapshot.val() || {};
+        activeTypersCount.textContent = Object.keys(localTyping).length;
+        renderUsers();
+    });
+
+    messagesRef.on('value', (snapshot) => {
+        localMessages = snapshot.val() || {};
+        renderMessages();
+    });
+
+    function renderUsers() {
+        usersList.innerHTML = '';
+        Object.keys(localUsers).forEach(uid => {
+            const userData = localUsers[uid];
+            const nickname = userData.nickname || 'Аноним';
+            const isTyping = localTyping[uid] ? 'Печатает...' : 'Неактивен';
+
+            if (searchQuery && !nickname.toLowerCase().includes(searchQuery) && !uid.toLowerCase().includes(searchQuery)) {
+                return;
+            }
+
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title">${nickname}</div>
+                    <div class="card-subtitle" style="color: ${localTyping[uid] ? 'var(--color-primary)' : 'var(--text-variant)'}">${isTyping}</div>
+                </div>
+                <div class="card-body">
+                    <span style="opacity: 0.6; font-size: 12px;">UID: ${uid}</span>
+                </div>
+                <div class="card-actions">
+                    <button class="btn-action edit-user-btn"><span class="material-symbols-outlined" style="font-size:16px;">edit</span> Изменить</button>
+                    <button class="btn-action danger delete-user-btn"><span class="material-symbols-outlined" style="font-size:16px;">delete</span> Стереть</button>
+                </div>
+            `;
+
+            card.querySelector('.edit-user-btn').addEventListener('click', () => {
+                selectedUserId = uid;
+                editUserNickInput.value = nickname;
+                editUserModal.classList.remove('hidden');
+            });
+
+            card.querySelector('.delete-user-btn').addEventListener('click', () => {
+                if(confirm(`Удалить пользователя ${nickname} из базы данных?`)) {
+                    usersRef.child(uid).remove();
+                    typingRef.child(uid).remove();
+                }
+            });
+
+            usersList.appendChild(card);
+        });
+    }
+
+    function renderMessages() {
+        msgsList.innerHTML = '';
+        
+        const sortedKeys = Object.keys(localMessages).sort((a, b) => {
+            return (localMessages[b].timestamp || 0) - (localMessages[a].timestamp || 0);
+        });
+
+        sortedKeys.forEach(mid => {
+            const msgData = localMessages[mid];
+            const author = msgData.nickname || 'Аноним';
+            const text = msgData.text || '';
+            const uid = msgData.userId || 'Нет UID';
+            
+            const date = new Date(msgData.timestamp || Date.now());
+            const formattedTime = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')} (${date.toLocaleDateString()})`;
+
+            if (searchQuery && !author.toLowerCase().includes(searchQuery) && !text.toLowerCase().includes(searchQuery) && !uid.toLowerCase().includes(searchQuery)) {
+                return;
+            }
+
+            const card = document.createElement('div');
+            card.classList.add('card');
+            
+            let replyMarkup = '';
+            if (msgData.replyTo) {
+                replyMarkup = `
+                    <div class="reply-box">
+                        <strong>${msgData.replyTo.nickname}:</strong> ${msgData.replyTo.text}
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title">${author} <span style="font-size:11px; font-weight:normal; color:var(--text-variant)">[${uid}]</span></div>
+                    <div class="card-subtitle">${formattedTime} ${msgData.edited ? '(изм.)' : ''}</div>
+                </div>
+                <div class="card-body">
+                    ${replyMarkup}
+                    <div>${text}</div>
+                </div>
+                <div class="card-actions">
+                    <button class="btn-action edit-msg-btn"><span class="material-symbols-outlined" style="font-size:16px;">edit</span> Изменить</button>
+                    <button class="btn-action danger delete-msg-btn"><span class="material-symbols-outlined" style="font-size:16px;">delete</span> Удалить</button>
+                </div>
+            `;
+
+            card.querySelector('.edit-msg-btn').addEventListener('click', () => {
+                selectedMsgId = mid;
+                editMsgTextInput.value = text;
+                editMsgModal.classList.remove('hidden');
+            });
+
+            card.querySelector('.delete-msg-btn').addEventListener('click', () => {
+                if(confirm('Удалить это сообщение безвозвратно?')) {
+                    messagesRef.child(mid).remove();
+                }
+            });
+
+            msgsList.appendChild(card);
+        });
+    }
+
+    closeUserModalBtn.addEventListener('click', () => {
+        editUserModal.classList.add('hidden');
+        selectedUserId = null;
+    });
+
+    saveUserModalBtn.addEventListener('click', () => {
+        const newNick = editUserNickInput.value.trim();
+        if (newNick && selectedUserId) {
+            usersRef.child(selectedUserId).update({
+                nickname: newNick
+            });
+            editUserModal.classList.add('hidden');
+            selectedUserId = null;
+        }
+    });
+
+    closeMsgModalBtn.addEventListener('click', () => {
+        editMsgModal.classList.add('hidden');
+        selectedMsgId = null;
+    });
+
+    saveMsgModalBtn.addEventListener('click', () => {
+        const newText = editMsgTextInput.value.trim();
+        if (newText && selectedMsgId) {
+            messagesRef.child(selectedMsgId).update({
+                text: newText,
+                edited: true
+            });
+            editMsgModal.classList.add('hidden');
+            selectedMsgId = null;
+        }
+    });
+</script>
+
+</body>
+</html>
