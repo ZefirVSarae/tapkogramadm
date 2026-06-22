@@ -27,6 +27,7 @@
             --text-variant: #caaeca;
             --outline: #523a52;
             --color-error: #ffb4ab;
+            --color-success: #b4ffb4;
         }
 
         html, body {
@@ -172,6 +173,7 @@
             justify-content: flex-end;
             gap: 8px;
             margin-top: 8px;
+            flex-wrap: wrap;
         }
 
         .btn-action {
@@ -325,6 +327,82 @@
             color: var(--text-variant);
             margin-top: 4px;
         }
+
+        .db-tree-container {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--bg-surface-variant);
+            border-radius: 16px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+
+        .tree-node {
+            margin-left: 20px;
+            position: relative;
+        }
+
+        .tree-toggle {
+            cursor: pointer;
+            color: var(--color-primary);
+            user-select: none;
+            font-weight: bold;
+            margin-right: 4px;
+        }
+
+        .tree-key {
+            color: var(--text-variant);
+            font-weight: 500;
+        }
+
+        .tree-value {
+            color: #b4ffb4;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .tree-value:hover {
+            background: var(--bg-surface-variant);
+            color: #fff;
+        }
+
+        .tree-actions {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: 8px;
+            opacity: 0.3;
+            vertical-align: middle;
+        }
+
+        .tree-node:hover > .tree-actions {
+            opacity: 1;
+        }
+
+        .tree-btn {
+            background: none;
+            border: none;
+            color: var(--text-main);
+            cursor: pointer;
+            padding: 0 2px;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .tree-btn:hover {
+            color: var(--color-primary);
+        }
+
+        .tree-btn.delete:hover {
+            color: var(--color-error);
+        }
+
+        .tree-btn .material-symbols-outlined {
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -345,9 +423,12 @@
         <button class="tab-btn" id="tabMsgsBtn">
             <span class="material-symbols-outlined">forum</span> Сообщения
         </button>
+        <button class="tab-btn" id="tabDbBtn">
+            <span class="material-symbols-outlined">computer</span> ДБ
+        </button>
     </div>
 
-    <div class="search-bar">
+    <div class="search-bar" id="searchBarContainer">
         <input type="text" id="panelSearch" placeholder="Поиск...">
     </div>
 
@@ -369,6 +450,11 @@
         <div id="msgsList" style="display:flex; flex-direction:column; gap:12px;"></div>
     </div>
 
+    <div id="panelDb" class="content-panel hidden">
+        <div style="font-size: 12px; color: var(--text-variant); margin-bottom: 4px;">Кликните на значение, чтобы отредактировать его напрямую в Firebase.</div>
+        <div class="db-tree-container" id="dbTreeRoot"></div>
+    </div>
+
     <div id="editUserModal" class="modal-overlay hidden">
         <div class="modal-content">
             <h3>Изменить профиль юзера</h3>
@@ -387,6 +473,18 @@
             <div class="modal-buttons">
                 <button class="modal-btn cancel" id="closeMsgModalBtn">Отмена</button>
                 <button class="modal-btn confirm" id="saveMsgModalBtn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editDbModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>Редактировать поле БД</h3>
+            <div id="dbPathDisplay" style="font-size:11px; color:var(--text-variant); word-break:break-all;"></div>
+            <input type="text" id="editDbValueInput" placeholder="Новое значение">
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" id="closeDbModalBtn">Отмена</button>
+                <button class="modal-btn confirm" id="saveDbModalBtn">Сохранить</button>
             </div>
         </div>
     </div>
@@ -412,14 +510,21 @@
     const messagesRef = db.ref('messages');
     const usersRef = db.ref('users');
     const typingRef = db.ref('typing');
+    const rootRef = db.ref();
 
     const tabUsersBtn = document.getElementById('tabUsersBtn');
     const tabMsgsBtn = document.getElementById('tabMsgsBtn');
+    const tabDbBtn = document.getElementById('tabDbBtn');
+    
     const panelUsers = document.getElementById('panelUsers');
     const panelMsgs = document.getElementById('panelMsgs');
+    const panelDb = document.getElementById('panelDb');
     
     const usersList = document.getElementById('usersList');
     const msgsList = document.getElementById('msgsList');
+    const dbTreeRoot = document.getElementById('dbTreeRoot');
+    
+    const searchBarContainer = document.getElementById('searchBarContainer');
     const panelSearch = document.getElementById('panelSearch');
     const dbStatus = document.getElementById('dbStatus');
     
@@ -436,8 +541,15 @@
     const closeMsgModalBtn = document.getElementById('closeMsgModalBtn');
     const saveMsgModalBtn = document.getElementById('saveMsgModalBtn');
 
+    const editDbModal = document.getElementById('editDbModal');
+    const dbPathDisplay = document.getElementById('dbPathDisplay');
+    const editDbValueInput = document.getElementById('editDbValueInput');
+    const closeDbModalBtn = document.getElementById('closeDbModalBtn');
+    const saveDbModalBtn = document.getElementById('saveDbModalBtn');
+
     let selectedUserId = null;
     let selectedMsgId = null;
+    let selectedDbPath = null;
     let searchQuery = '';
 
     db.ref('.info/connected').on('value', (snap) => {
@@ -453,15 +565,31 @@
     tabUsersBtn.addEventListener('click', () => {
         tabUsersBtn.classList.add('active');
         tabMsgsBtn.classList.remove('active');
+        tabDbBtn.classList.remove('active');
         panelUsers.classList.remove('hidden');
         panelMsgs.classList.add('hidden');
+        panelDb.classList.add('hidden');
+        searchBarContainer.classList.remove('hidden');
     });
 
     tabMsgsBtn.addEventListener('click', () => {
         tabMsgsBtn.classList.add('active');
         tabUsersBtn.classList.remove('active');
+        tabDbBtn.classList.remove('active');
         panelMsgs.classList.remove('hidden');
         panelUsers.classList.add('hidden');
+        panelDb.classList.add('hidden');
+        searchBarContainer.classList.remove('hidden');
+    });
+
+    tabDbBtn.addEventListener('click', () => {
+        tabDbBtn.classList.add('active');
+        tabUsersBtn.classList.remove('active');
+        tabMsgsBtn.classList.remove('active');
+        panelDb.classList.remove('hidden');
+        panelUsers.classList.add('hidden');
+        panelMsgs.classList.add('hidden');
+        searchBarContainer.classList.add('hidden');
     });
 
     panelSearch.addEventListener('input', (e) => {
@@ -473,6 +601,7 @@
     let localUsers = {};
     let localMessages = {};
     let localTyping = {};
+    let fullDbSnapshot = {};
 
     usersRef.on('value', (snapshot) => {
         localUsers = snapshot.val() || {};
@@ -491,12 +620,18 @@
         renderMessages();
     });
 
+    rootRef.on('value', (snapshot) => {
+        fullDbSnapshot = snapshot.val() || {};
+        renderDbTree();
+    });
+
     function renderUsers() {
         usersList.innerHTML = '';
         Object.keys(localUsers).forEach(uid => {
             const userData = localUsers[uid];
             const nickname = userData.nickname || 'Аноним';
-            const isTyping = localTyping[uid] ? 'Печатает...' : 'Неактивен';
+            const isBanned = userData.banned === true;
+            const isTyping = localTyping[uid] ? 'Печатает...' : (isBanned ? 'Заблокирован' : 'Неактивен');
 
             if (searchQuery && !nickname.toLowerCase().includes(searchQuery) && !uid.toLowerCase().includes(searchQuery)) {
                 return;
@@ -504,17 +639,24 @@
 
             const card = document.createElement('div');
             card.classList.add('card');
+            if (isBanned) {
+                card.style.borderColor = 'var(--color-error)';
+            }
+            
             card.innerHTML = `
                 <div class="card-header">
-                    <div class="card-title">${nickname}</div>
-                    <div class="card-subtitle" style="color: ${localTyping[uid] ? 'var(--color-primary)' : 'var(--text-variant)'}">${isTyping}</div>
+                    <div class="card-title">${nickname} ${isBanned ? '<span style="color:var(--color-error); font-size:12px;">(БАН)</span>' : ''}</div>
+                    <div class="card-subtitle" style="color: ${localTyping[uid] ? 'var(--color-primary)' : (isBanned ? 'var(--color-error)' : 'var(--text-variant)')}">${isTyping}</div>
                 </div>
                 <div class="card-body">
                     <span style="opacity: 0.6; font-size: 12px;">UID: ${uid}</span>
                 </div>
                 <div class="card-actions">
-                    <button class="btn-action edit-user-btn"><span class="material-symbols-outlined" style="font-size:16px;">edit</span> Изменить</button>
-                    <button class="btn-action danger delete-user-btn"><span class="material-symbols-outlined" style="font-size:16px;">delete</span> Стереть</button>
+                    <button class="btn-action edit-user-btn"><span class="material-symbols-outlined" style="font-size:16px;">edit</span> Ник</button>
+                    <button class="btn-action toggle-ban-btn ${isBanned ? '' : 'danger'}">
+                        <span class="material-symbols-outlined" style="font-size:16px;">block</span> ${isBanned ? 'Разбанить' : 'Бан'}
+                    </button>
+                    <button class="btn-action drop-uid-btn"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span> Сбросить сессию</button>
                 </div>
             `;
 
@@ -524,10 +666,15 @@
                 editUserModal.classList.remove('hidden');
             });
 
-            card.querySelector('.delete-user-btn').addEventListener('click', () => {
-                if(confirm(`Удалить пользователя ${nickname} из базы данных?`)) {
-                    usersRef.child(uid).remove();
-                    typingRef.child(uid).remove();
+            card.querySelector('.toggle-ban-btn').addEventListener('click', () => {
+                usersRef.child(uid).update({
+                    banned: !isBanned
+                });
+            });
+
+            card.querySelector('.drop-uid-btn').addEventListener('click', () => {
+                if(confirm(`Принудительно разлогинить пользователя ${nickname}? Сменится внутренний UID.`)) {
+                    usersRef.child(uid).update({ sessionInvalid: true });
                 }
             });
 
@@ -598,6 +745,94 @@
         });
     }
 
+    function buildTreeHTML(obj, currentPath = '') {
+        if (obj === null || obj === undefined) return '';
+        
+        let html = '';
+        
+        if (typeof obj === 'object') {
+            const keys = Object.keys(obj);
+            keys.forEach(key => {
+                const path = currentPath ? `${currentPath}/${key}` : key;
+                const value = obj[key];
+                const isObject = typeof value === 'object' && value !== null;
+                
+                const node = document.createElement('div');
+                node.classList.add('tree-node');
+                
+                if (isObject) {
+                    node.innerHTML = `
+                        <span class="tree-toggle">▼</span>
+                        <span class="tree-key">${key}</span>
+                        <div class="tree-actions">
+                            <button class="tree-btn delete" data-path="${path}"><span class="material-symbols-outlined">delete</span></button>
+                        </div>
+                        <div class="tree-children"></div>
+                    `;
+                    const childrenContainer = node.querySelector('.tree-children');
+                    childrenContainer.appendChild(buildTreeHTML(value, path));
+                    
+                    node.querySelector('.tree-toggle').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (childrenContainer.classList.contains('hidden')) {
+                            childrenContainer.classList.remove('hidden');
+                            e.target.textContent = '▼';
+                        } else {
+                            childrenContainer.classList.add('hidden');
+                            e.target.textContent = '►';
+                        }
+                    });
+                } else {
+                    node.innerHTML = `
+                        <span class="tree-key">${key}:</span>
+                        <span class="tree-value" data-path="${path}">${JSON.stringify(value)}</span>
+                        <div class="tree-actions">
+                            <button class="tree-btn edit" data-path="${path}" data-val='${JSON.stringify(value)}'><span class="material-symbols-outlined">edit</span></button>
+                            <button class="tree-btn delete" data-path="${path}"><span class="material-symbols-outlined">delete</span></button>
+                        </div>
+                    `;
+                    
+                    node.querySelector('.tree-value').addEventListener('click', () => {
+                        openDbEditModal(path, value);
+                    });
+                    node.querySelector('.tree-btn.edit').addEventListener('click', () => {
+                        openDbEditModal(path, value);
+                    });
+                }
+                
+                node.querySelector('.tree-btn.delete').addEventListener('click', (e) => {
+                    const targetPath = e.currentTarget.getAttribute('data-path');
+                    if (confirm(`Удалить ветку БД по пути: /${targetPath}?`)) {
+                        db.ref(targetPath).remove();
+                    }
+                });
+
+                const wrapper = document.createElement('div');
+                wrapper.appendChild(node);
+                html += wrapper.innerHTML;
+            });
+        }
+        
+        const fragment = document.createElement('div');
+        fragment.innerHTML = html;
+        return fragment;
+    }
+
+    function renderDbTree() {
+        dbTreeRoot.innerHTML = '';
+        const rootContainer = document.createElement('div');
+        rootContainer.innerHTML = `<span class="tree-key" style="color:var(--color-primary)">prmesenger-default-rtdb (root)</span>`;
+        rootContainer.appendChild(buildTreeHTML(fullDbSnapshot));
+        dbTreeRoot.appendChild(rootContainer);
+    }
+
+    function openDbEditModal(path, val) {
+        selectedDbPath = path;
+        dbPathDisplay.textContent = `Путь: /${path}`;
+        editDbValueInput.value = typeof val === 'object' ? JSON.stringify(val) : val;
+        editDbModal.classList.remove('hidden');
+    }
+
     closeUserModalBtn.addEventListener('click', () => {
         editUserModal.classList.add('hidden');
         selectedUserId = null;
@@ -628,6 +863,25 @@
             });
             editMsgModal.classList.add('hidden');
             selectedMsgId = null;
+        }
+    });
+
+    closeDbModalBtn.addEventListener('click', () => {
+        editDbModal.classList.add('hidden');
+        selectedDbPath = null;
+    });
+
+    saveDbModalBtn.addEventListener('click', () => {
+        const rawValue = editDbValueInput.value.trim();
+        if (selectedDbPath) {
+            let parsedValue = rawValue;
+            if (rawValue === 'true') parsedValue = true;
+            else if (rawValue === 'false') parsedValue = false;
+            else if (!isNaN(rawValue) && rawValue !== '') parsedValue = Number(rawValue);
+            
+            db.ref(selectedDbPath).set(parsedValue);
+            editDbModal.classList.add('hidden');
+            selectedDbPath = null;
         }
     });
 </script>
